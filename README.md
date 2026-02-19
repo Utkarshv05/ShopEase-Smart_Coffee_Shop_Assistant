@@ -21,7 +21,7 @@ Through this project, you will gain hands-on experience in:
 * Building a React Native app that integrates this powerful chatbot.
 
 ## 🧠 Chatbot Agent Architecture
-![Coffee Shop Agent Architecture](./images/chatbot_agent_architecture.jpg)
+![Coffee Shop Agent Architecture](.chatbot_agent_architecture.jpg)
 
 The chatbot in this project is designed using a modular agent-based architecture, where each agent is responsible for a specific task, ensuring a seamless and efficient interaction between the user and the coffee shop’s services. This architecture enables the chatbot to perform complex actions by delegating tasks to specialized agents, making the system highly flexible, scalable, and easy to extend.
 
@@ -50,7 +50,7 @@ The agents work collaboratively in a pipeline architecture to process user input
 
 
 ## 📱 React Native Coffee Shop App
-![Coffee Shop Agent Architecture](./images/mobile_app.png)
+![ShopEase app](./images/mobile_app.png)
 
 The React Native Coffee Shop App serves as the front-end interface for customers to interact with the AI-powered chatbot and explore the menu. Designed with a clean, intuitive user experience in mind, the app seamlessly integrates the chatbot for real-time customer service, enabling users to place orders, receive personalized product recommendations, and get detailed information about menu items.
 
