@@ -84,3 +84,6 @@ Each folder has their own getting started section. So this way we can deploy the
 * [Hugging Face](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct): Hugging Face Models - Repository for Llama LLms, a state-of-the-art NLP model used in our chatbot.
 * [Pinecone](https://docs.pinecone.io/guides/get-started/quickstart): Pinecone Documentation - Documentation for the vector database used in the project.
 * [Firebase](https://firebase.google.com/docs): Firebase Documentation - Comprehensive guide for using Firebase to manage app data for the coffee shop app.
+
+##  Reference Video
+[![Watch the video](https://img.youtube.com/vi/KyQKTJhSIak/0.jpg)](https://youtu.be/KyQKTJhSIak)
