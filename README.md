@@ -50,7 +50,7 @@ The agents work collaboratively in a pipeline architecture to process user input
 
 
 ## 📱 React Native Coffee Shop App
-![ShopEase app](./images/mobile_app.png)
+![ShopEase app](mobile_app.png)
 
 The React Native Coffee Shop App serves as the front-end interface for customers to interact with the AI-powered chatbot and explore the menu. Designed with a clean, intuitive user experience in mind, the app seamlessly integrates the chatbot for real-time customer service, enabling users to place orders, receive personalized product recommendations, and get detailed information about menu items.
 
