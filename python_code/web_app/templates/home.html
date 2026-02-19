@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Home - ShopEase Coffee Shop{% endblock %}
+
+{% block content %}
+<div class="app-container">
+    <!-- Search Area -->
+    <div class="search-area">
+        <!-- Coffee Animation in Top Left Corner -->
+        <div class="coffee-brew-container">
+            <div class="coffee-cup">
+                <div class="coffee-liquid"></div>
+                <div class="coffee-steam">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+        <div class="search-content">
+            <p class="search-label">Location</p>
+            <p class="search-location">Mumbai, Maharashtra</p>
+            
+            <div class="search-input-container">
+                <div class="search-box">
+                    <svg class="search-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </div>
+                <button class="filter-button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner -->
+    <div class="banner-container">
+        <div class="banner-background"></div>
+        <div class="banner-image">
+            <div class="banner-overlay">
+                <span class="promo-badge">Promo</span>
+                <div class="banner-shapes">
+                    <div class="banner-shape-1"></div>
+                    <div class="banner-shape-2"></div>
+                </div>
+                <h2 class="banner-title">Buy one get one FREE</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="categories-container">
+        <div class="categories-scroll" id="categoriesList">
+            <!-- Categories will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="products-container">
+        <div class="products-grid" id="productsGrid">
+            <!-- Products will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="/home" class="nav-item active">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>Home</span>
+        </a>
+        <a href="/chat" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Chat</span>
+        </a>
+        <a href="/order" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span>Cart</span>
+            <span class="cart-badge" id="cartBadge">0</span>
+        </a>
+    </nav>
+</div>
+
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+{% endblock %}
+
+
+

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Order - ShopEase Coffee Shop{% endblock %}
+
+{% block content %}
+<div class="order-page">
+    <div class="page-header">
+        <a href="/home" class="back-button">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </a>
+        <h1 class="page-title">Order</h1>
+        <div class="header-spacer"></div>
+    </div>
+
+    <div class="order-content">
+        <div class="order-list-container" id="orderList">
+            <!-- Order items will be populated by JavaScript -->
+            <div class="empty-cart">
+                <h2>No items in your cart yet</h2>
+                <p>Let's Go Get some Delicious Goodies</p>
+            </div>
+        </div>
+
+        <div class="order-footer">
+            <div class="payment-method">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C67C4E" stroke-width="2">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                <div class="payment-info">
+                    <p class="payment-label">Cash/Wallet</p>
+                    <p class="payment-amount">₹ <span id="totalPrice">0</span></p>
+                </div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            
+            <button id="orderButton" class="order-button" disabled>Order</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/order.js') }}"></script>
+{% endblock %}
+
+
+

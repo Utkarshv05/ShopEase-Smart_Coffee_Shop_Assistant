@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}ShopEase Coffee Shop - Welcome{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+    <div class="landing-background">
+        <!-- Decorative coffee beans -->
+        <div class="coffee-bean coffee-bean-1"></div>
+        <div class="coffee-bean coffee-bean-2"></div>
+        <div class="coffee-bean coffee-bean-3"></div>
+        <div class="coffee-bean coffee-bean-4"></div>
+        
+        <!-- Decorative circles -->
+        <div class="decorative-circle circle-1"></div>
+        <div class="decorative-circle circle-2"></div>
+        <div class="decorative-circle circle-3"></div>
+        
+        <div class="landing-content">
+            <div class="landing-logo">
+                <div class="logo-icon">☕</div>
+                <h1 class="logo-text">ShopEase</h1>
+            </div>
+            
+            <div class="landing-text-container">
+                <h2 class="landing-title">Fall in Love with Coffee in Blissful Delight!</h2>
+                <p class="landing-subtitle">
+                    Welcome to our cozy coffee corner, where every cup is crafted with passion and served with a smile.
+                </p>
+                <a href="/home" class="landing-button">
+                    <span>Get Started</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+            
+            <div class="landing-features">
+                <div class="feature-item">
+                    <div class="feature-icon">🌱</div>
+                    <span class="feature-text">Fresh Beans</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">☕</div>
+                    <span class="feature-text">Expert Brewing</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">❤️</div>
+                    <span class="feature-text">Made with Love</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

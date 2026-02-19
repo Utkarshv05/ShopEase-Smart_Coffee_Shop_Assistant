@@ -1,0 +1,30 @@
+# Environment variables
+**/.env
+**/npm_installs.txt
+
+# Python cache
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Machine Learning Models
+*.pkl
+*.h5
+*.model
+*.weights
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints

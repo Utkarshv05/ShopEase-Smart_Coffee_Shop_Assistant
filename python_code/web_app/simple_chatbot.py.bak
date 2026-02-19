@@ -1,0 +1,514 @@
+"""
+Simple chatbot that works without RunPod
+Uses Google Gemini API directly or falls back to rule-based responses
+"""
+import os
+import json
+import re
+from typing import List, Dict, Any
+from dotenv import load_dotenv
+
+class SimpleChatbot:
+    def __init__(self):
+        self.gemini_available = False
+        self.genai = None
+        self.model = None
+        
+        # Try to use Google Gemini if API key is available
+        # Check both web_app directory and api directory for .env file
+        load_dotenv()  # Load from current directory
+        load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', 'api', '.env'))  # Also check api directory
+        
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=gemini_key)
+                self.genai = genai
+                # Default to gemini-1.5-flash (faster) or gemini-1.5-pro (more capable)
+                # gemini-pro is also valid but older
+                model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+                self.model = genai.GenerativeModel(model_name)
+                self.gemini_available = True
+                print(f"Using Google Gemini API with model: {model_name}")
+            except Exception as e:
+                print(f"Gemini initialization failed: {e}")
+        else:
+            print("No Gemini API key found, using rule-based chatbot")
+        
+        # Load products for context
+        self.products = self._load_products()
+        
+    def _load_products(self):
+        """Load products from JSONL file"""
+        products = []
+        products_file = os.path.join(os.path.dirname(__file__), '..', 'products', 'products.jsonl')
+        
+        try:
+            with open(products_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        products.append(json.loads(line.strip()))
+        except Exception as e:
+            print(f"Error loading products: {e}")
+        
+        return products
+    
+    def _extract_order_items(self, user_message: str, bot_response: str, current_order: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Extract order items from user message and update current order"""
+        order_items = current_order.copy() if current_order else []
+        user_lower = user_message.lower()
+        bot_lower = bot_response.lower() if bot_response else ""
+        
+        # Check for product mentions in user message (primary source)
+        for product in self.products:
+            product_name_lower = product['name'].lower()
+            product_words = product_name_lower.split()
+            
+            # Check if product is mentioned in user message
+            # Use word matching for better accuracy
+            product_mentioned = False
+            if len(product_words) == 1:
+                # Single word product - check exact match or contains
+                product_mentioned = product_words[0] in user_lower
+            else:
+                # Multi-word product - check if all words are present
+                product_mentioned = all(word in user_lower for word in product_words)
+            
+            if product_mentioned:
+                # Try to extract quantity
+                quantity = 1
+                words = user_lower.split()
+                
+                # Find product position
+                for i, word in enumerate(words):
+                    # Check if this word contains any part of the product name
+                    if any(pw in word for pw in product_words):
+                        # Check before and after for numbers
+                        if i > 0:
+                            try:
+                                quantity = int(words[i-1])
+                            except:
+                                # Check for word numbers
+                                num_words = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10, 'a': 1, 'an': 1}
+                                if words[i-1] in num_words:
+                                    quantity = num_words[words[i-1]]
+                        if i < len(words) - 1:
+                            try:
+                                quantity = int(words[i+1])
+                            except:
+                                pass
+                        break
+                
+                # Also check for patterns like "2x cappuccino" or "cappuccino x2"
+                patterns = [
+                    rf'(\d+)\s*x\s*{re.escape(product_name_lower)}',
+                    rf'{re.escape(product_name_lower)}\s*x\s*(\d+)',
+                    rf'(\d+)\s+{re.escape(product_name_lower)}',
+                ]
+                for pattern in patterns:
+                    match = re.search(pattern, user_lower)
+                    if match:
+                        quantity = int(match.group(1))
+                        break
+                
+                # Check if item already in order
+                found = False
+                for item in order_items:
+                    if item['item'] == product['name']:
+                        item['quantity'] += quantity
+                        found = True
+                        break
+                
+                if not found:
+                    order_items.append({"item": product['name'], "quantity": quantity})
+        
+        # Check for removal words ("remove", "cancel", "no", "don't want")
+        remove_words = ['remove', 'cancel', 'delete', "don't want", "don't need", "no"]
+        if any(word in user_lower for word in remove_words):
+            for product in self.products:
+                if product['name'].lower() in user_lower:
+                    order_items = [item for item in order_items if item['item'] != product['name']]
+        
+        return order_items
+    
+    def _double_check_json_output(self, json_string: str) -> str:
+        """Double check and fix JSON output (like original utils.double_check_json_output)"""
+        try:
+            # First try to parse it
+            json.loads(json_string)
+            return json_string  # Already valid
+        except:
+            pass
+        
+        # Ask Gemini to fix the JSON
+        if self.gemini_available:
+            try:
+                fix_prompt = f"""You will check this json string and correct any mistakes that will make it invalid. Then you will return the corrected json string. Nothing else. 
+If the Json is correct just return it.
+
+Do NOT return a single letter outside of the json string.
+
+There is no need to inform that the json is already correct only return the json string. I repeat it again only return json string.
+
+{json_string}"""
+                
+                fixed_json = self._get_gemini_response([{"role": "user", "content": fix_prompt}])
+                if fixed_json:
+                    return fixed_json.strip()
+            except Exception as e:
+                print(f"Error fixing JSON: {e}")
+        
+        return json_string
+    
+    def _parse_json_from_response(self, response: str) -> Dict[str, Any]:
+        """Parse JSON from Gemini response (like original double_check_json_output)"""
+        try:
+            # Try to find JSON in the response
+            # Look for JSON object boundaries
+            start_idx = response.find('{')
+            end_idx = response.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                json_str = response[start_idx:end_idx+1]
+                # Double check JSON (like original)
+                json_str = self._double_check_json_output(json_str)
+                return json.loads(json_str)
+            
+            # Try parsing the whole response as JSON
+            json_str = self._double_check_json_output(response.strip())
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            # Try to extract JSON from markdown code blocks
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
+            if json_match:
+                try:
+                    json_str = self._double_check_json_output(json_match.group(1))
+                    return json.loads(json_str)
+                except:
+                    pass
+            
+            # Try to find JSON object in the response
+            json_match = re.search(r'\{[^{}]*"order"[^{}]*\}', response, re.DOTALL)
+            if json_match:
+                try:
+                    json_str = self._double_check_json_output(json_match.group(0))
+                    return json.loads(json_str)
+                except:
+                    pass
+            
+            return None
+    
+    def _process_order_json(self, order_list: List[Dict[str, Any]], current_order: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Process order JSON from Gemini (like original postprocess)"""
+        try:
+            # Handle string JSON (like original)
+            if isinstance(order_list, str):
+                order_list = json.loads(order_list)
+            
+            if not isinstance(order_list, list):
+                return current_order if current_order else []
+            
+            # Validate and format order items
+            validated_items = []
+            for item in order_list:
+                item_name = item.get("item", "")
+                quantity = item.get("quantity", 1)
+                
+                # Find matching product from menu
+                for product in self.products:
+                    if product['name'].lower() == item_name.lower():
+                        price = product['price'] * int(quantity)
+                        validated_items.append({
+                            "item": product['name'],  # Use exact product name from menu
+                            "quantity": int(quantity),
+                            "price": price
+                        })
+                        break
+            
+            if validated_items:
+                # Merge with current order (add to existing, don't replace)
+                merged_order = current_order.copy() if current_order else []
+                for new_item in validated_items:
+                    found = False
+                    for existing_item in merged_order:
+                        if existing_item['item'] == new_item['item']:
+                            existing_item['quantity'] += new_item['quantity']
+                            # Recalculate price
+                            product_price = [p['price'] for p in self.products if p['name'] == new_item['item']][0]
+                            existing_item['price'] = existing_item['quantity'] * product_price
+                            found = True
+                            break
+                    if not found:
+                        merged_order.append(new_item)
+                
+                return merged_order
+            
+            return current_order if current_order else []
+        except Exception as e:
+            print(f"Error processing order JSON: {e}")
+            return current_order if current_order else []
+    
+    def _get_gemini_response(self, messages: List[Dict[str, Any]]) -> str:
+        """Get response from Google Gemini"""
+        try:
+            # Extract system prompt and build conversation
+            system_prompt = ""
+            conversation_history = []
+            
+            for msg in messages:
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                
+                if role == "system":
+                    system_prompt = content
+                elif role == "user":
+                    conversation_history.append({"role": "user", "parts": [content]})
+                elif role == "assistant":
+                    conversation_history.append({"role": "model", "parts": [content]})
+            
+            # Start a chat with history
+            chat = self.model.start_chat(history=conversation_history[:-1] if len(conversation_history) > 1 else [])
+            
+            # Build the prompt with system instructions
+            if system_prompt and conversation_history:
+                # Include system prompt in the user message
+                last_user_message = conversation_history[-1]["parts"][0] if conversation_history else ""
+                full_prompt = f"{system_prompt}\n\nUser: {last_user_message}"
+            elif conversation_history:
+                full_prompt = conversation_history[-1]["parts"][0]
+            else:
+                return None
+            
+            # Generate response
+            response = chat.send_message(full_prompt)
+            return response.text
+        except Exception as e:
+            print(f"Gemini API error: {e}")
+            import traceback
+            traceback.print_exc()
+            # Try simpler approach without chat history
+            try:
+                system_prompt = ""
+                user_message = ""
+                for msg in messages:
+                    if msg.get("role") == "system":
+                        system_prompt = msg.get("content", "")
+                    elif msg.get("role") == "user":
+                        user_message = msg.get("content", "")
+                
+                if system_prompt and user_message:
+                    prompt = f"{system_prompt}\n\nUser: {user_message}"
+                else:
+                    prompt = user_message
+                
+                response = self.model.generate_content(prompt)
+                return response.text
+            except Exception as e2:
+                print(f"Gemini fallback error: {e2}")
+                return None
+    
+    def _rule_based_response(self, user_message: str, conversation_history: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Rule-based chatbot fallback"""
+        message_lower = user_message.lower()
+        
+        # Greeting
+        if any(word in message_lower for word in ['hello', 'hi', 'hey', 'greetings']):
+            return {
+                "role": "assistant",
+                "content": "Hello! Welcome to ShopEase Coffee Shop. How can I help you today? I can assist you with menu items, take your order, or provide recommendations!",
+                "memory": {"agent": "general"}
+            }
+        
+        # Menu/Products questions
+        if any(word in message_lower for word in ['menu', 'what do you have', 'what can i get', 'products', 'items', 'list']):
+            product_list = "\n".join([f"- {p['name']} (₹{p['price']})" for p in self.products[:10]])
+            return {
+                "role": "assistant",
+                "content": f"Here are some of our popular items:\n{product_list}\n\nWould you like to know more about any specific item or place an order?",
+                "memory": {"agent": "details_agent"}
+            }
+        
+        # Product details
+        for product in self.products:
+            if product['name'].lower() in message_lower:
+                return {
+                    "role": "assistant",
+                    "content": f"{product['name']} - ₹{product['price']}\n\n{product['description']}\n\nWould you like to add this to your order?",
+                    "memory": {"agent": "details_agent"}
+                }
+        
+        # Order taking
+        if any(word in message_lower for word in ['order', 'buy', 'purchase', 'get', 'want', 'i would like', 'i\'d like', 'add', 'i need']):
+            # Get current order from conversation history
+            current_order = []
+            for msg in reversed(conversation_history):
+                if isinstance(msg, dict) and msg.get("role") == "assistant" and msg.get("memory", {}).get("order"):
+                    current_order = msg.get("memory", {}).get("order", [])
+                    break
+            
+            # Extract product names from message
+            ordered_items = self._extract_order_items(user_message, "", current_order)
+            
+            if ordered_items:
+                items_text = ", ".join([f"{item['quantity']}x {item['item']}" for item in ordered_items])
+                return {
+                    "role": "assistant",
+                    "content": f"Great! I've added to your cart: {items_text}. Is there anything else you'd like to add?",
+                    "memory": {"agent": "order_taking_agent", "order": ordered_items}
+                }
+            else:
+                return {
+                    "role": "assistant",
+                    "content": "I'd be happy to help you place an order! What would you like to order? For example, you can say 'I'd like a Cappuccino' or 'I want 2 Lattes'.",
+                    "memory": {"agent": "order_taking_agent", "order": current_order if current_order else []}
+                }
+        
+        # Recommendations
+        if any(word in message_lower for word in ['recommend', 'suggestion', 'what should i', 'what do you recommend']):
+            recommendations = [
+                "Cappuccino - A rich and creamy classic",
+                "Latte - Smooth and velvety",
+                "Chocolate Croissant - A sweet indulgence",
+                "Almond Croissant - Delightful nutty flavor"
+            ]
+            return {
+                "role": "assistant",
+                "content": f"Here are some of my recommendations:\n" + "\n".join([f"- {r}" for r in recommendations]) + "\n\nWould you like to add any of these to your order?",
+                "memory": {"agent": "recommendation_agent"}
+            }
+        
+        # Location/Hours
+        if any(word in message_lower for word in ['location', 'where', 'address', 'hours', 'open', 'close']):
+            return {
+                "role": "assistant",
+                "content": "We're located in Mumbai, Maharashtra. Our hours are typically 7 AM to 10 PM daily. Is there anything else I can help you with?",
+                "memory": {"agent": "details_agent"}
+            }
+        
+        # Default response
+        return {
+            "role": "assistant",
+            "content": "I'm here to help you with your coffee shop needs! You can ask me about our menu, place an order, get recommendations, or ask about our location and hours. What would you like to know?",
+            "memory": {"agent": "general"}
+        }
+    
+    def get_response(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Main response handler"""
+        if not messages:
+            return {
+                "role": "assistant",
+                "content": "Hello! How can I help you today?",
+                "memory": {"agent": "general"}
+            }
+        
+        user_message = messages[-1].get('content', '')
+        
+        # Get current order from conversation history
+        current_order = []
+        for msg in reversed(messages[:-1]):  # Check previous messages (excluding current)
+            if msg.get("role") == "assistant" and msg.get("memory", {}).get("order"):
+                current_order = msg.get("memory", {}).get("order", [])
+                break
+        
+        # Try Gemini first if available
+        if self.gemini_available:
+            # Build comprehensive system prompt based on RunPod agent prompts
+            menu_items = "\n".join([f"{p['name']} - ₹{p['price']}" for p in self.products])
+            
+            # Get conversation history for order tracking
+            current_order = []
+            for msg in reversed(messages[:-1]):  # Check previous messages
+                if msg.get("role") == "assistant" and msg.get("memory", {}).get("order"):
+                    current_order = msg.get("memory", {}).get("order", [])
+                    break
+            
+            # Build order context from previous messages
+            order_context = ""
+            if current_order:
+                order_context = f"\nCurrent order so far: {json.dumps(current_order)}\n"
+            
+            system_prompt = """You are a customer support Bot for a coffee shop called "ShopEase"
+
+Here is the menu for this coffee shop:
+
+""" + menu_items + order_context + """
+
+Things to NOT DO:
+* DON't ask how to pay by cash or Card.
+* Don't tell the user to go to the counter
+* Don't tell the user to go to place to get the order
+
+You're task is as follows:
+1. Take the User's Order
+2. Validate that all their items are in the menu
+3. if an item is not in the menu let the user and repeat back the remaining valid order
+4. Ask them if they need anything else.
+5. If they do then repeat starting from step 3
+6. If they don't want anything else. Using the "order" object that is in the output. Make sure to hit all three points
+    1. list down all the items and their prices
+    2. calculate the total. 
+    3. Thank the user for the order and close the conversation with no more questions
+
+Your output should be in a structured json format like so. each key is a string and each value is a string. Make sure to follow the format exactly:
+{
+"chain of thought": Write down your critical thinking about the user input and it's relation to the coffee shop process. Then write down your thinking about how you should respond in the response parameter taking into consideration the Things to NOT DO section.
+"order": this is going to be a list of jsons like so. [{"item":put the item name, "quantity": put the number that the user wants from this item, "price":put the total price of the item }]. If no items are being ordered, use an empty list [].
+"response": write the a response to the user
+}
+
+produce the following output without any additions, not a single letter outside of the structure below."""
+            
+            try:
+                # Build messages with system prompt and conversation history
+                gemini_messages = [{"role": "system", "content": system_prompt}]
+                # Add last 3 messages for context
+                for msg in messages[-3:]:
+                    gemini_messages.append(msg)
+                
+                response = self._get_gemini_response(gemini_messages)
+                
+                if response:
+                    # Parse JSON response (like original order_taking_agent)
+                    try:
+                        # Try to extract JSON from response
+                        json_data = self._parse_json_from_response(response)
+                        
+                        if json_data and "order" in json_data:
+                            order_items = self._process_order_json(json_data.get("order", []), current_order)
+                            clean_response = json_data.get("response", response)
+                        else:
+                            # Fallback: extract from user message
+                            order_items = self._extract_order_items(user_message, response, current_order)
+                            clean_response = response
+                    except Exception as e:
+                        print(f"Error parsing JSON response: {e}")
+                        # Fallback: extract from user message
+                        order_items = self._extract_order_items(user_message, response, current_order)
+                        clean_response = response
+                    
+                    # Determine agent type based on response
+                    agent_type = "general"
+                    if order_items:
+                        agent_type = "order_taking_agent"
+                    elif any(word in user_message.lower() for word in ['recommend', 'suggestion', 'what should i']):
+                        agent_type = "recommendation_agent"
+                    elif any(word in user_message.lower() for word in ['menu', 'what do you have', 'location', 'hours']):
+                        agent_type = "details_agent"
+                    
+                    memory = {"agent": agent_type}
+                    if order_items:
+                        memory["order"] = order_items
+                        print(f"Order extracted: {order_items}")  # Debug log
+                    
+                    return {
+                        "role": "assistant",
+                        "content": clean_response,
+                        "memory": memory
+                    }
+            except Exception as e:
+                print(f"Gemini error, falling back to rule-based: {e}")
+        
+        # Fallback to rule-based
+        return self._rule_based_response(user_message, messages)
+

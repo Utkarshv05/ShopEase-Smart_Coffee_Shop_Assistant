@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ShopEase Coffee Shop{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <!-- Load cart and utility functions first -->
+    <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+    <script>
+        // Debug: Check if cart functions are available
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Cart functions available:', {
+                addToCart: typeof addToCart !== 'undefined',
+                emptyCart: typeof emptyCart !== 'undefined',
+                updateCartBadge: typeof updateCartBadge !== 'undefined',
+                showToast: typeof showToast !== 'undefined'
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+

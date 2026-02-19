@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Product Details - ShopEase Coffee Shop{% endblock %}
+
+{% block content %}
+<div class="details-page">
+    <div class="page-header">
+        <a href="/home" class="back-button">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </a>
+        <h1 class="page-title">Detail</h1>
+        <button class="header-right-button">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <div class="details-content">
+        <div class="details-scroll">
+            <div class="details-main">
+                <div class="product-image-container" id="productImageContainer">
+                    <!-- Product image will be populated by JavaScript -->
+                </div>
+                
+                <div class="product-info">
+                    <h2 class="product-name" id="productName"></h2>
+                    <p class="product-category" id="productCategory"></p>
+                    <div class="product-rating" id="productRating">
+                        <!-- Rating stars will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="description-section">
+                    <h3 class="section-title">Description</h3>
+                    <p class="description-text" id="productDescription"></p>
+                </div>
+
+                <div class="sizes-section">
+                    <h3 class="section-title">Size</h3>
+                    <div class="size-options">
+                        <button class="size-option active">S</button>
+                        <button class="size-option">M</button>
+                        <button class="size-option">L</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="details-footer">
+            <div class="price-info">
+                <p class="price-label">Price</p>
+                <p class="price-value">₹ <span id="productPrice"></span></p>
+            </div>
+            <button id="buyNowButton" class="buy-now-button">Buy Now</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/details.js') }}"></script>
+{% endblock %}
+
+
+
